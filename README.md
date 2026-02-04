@@ -1,66 +1,227 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# PHP_LARAVEL12_GEO_GENIUS
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel 12 based Geo Genius project with **Multi-Language**, **Role & Permission**, and **Geo-based services**, built using a **Modular + Service Oriented Architecture**.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Step 1: Install Fresh Laravel 12 Application
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Open Terminal / Command Prompt and run:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```bash
+composer create-project laravel/laravel:^12.0 PHP_LARAVEL12_GEO_GENIUS
+```
 
-## Learning Laravel
+Move into the project directory:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+```bash
+cd PHP_LARAVEL12_GEO_GENIUS
+```
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+Generate application key:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+php artisan key:generate
+```
 
-## Laravel Sponsors
+### Explanation
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+* Installs a clean Laravel 12 project
+* Application key is required for encryption and security
 
-### Premium Partners
+---
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+## Step 2: Configure Environment & Database
 
-## Contributing
+Open `.env` file and update database configuration:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```env
+DB_CONNECTION=mysql
+DB_HOST=localhost
+DB_PORT=3306
+DB_DATABASE=geo_genius
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-## Code of Conduct
+Save the file.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Run migrations:
 
-## Security Vulnerabilities
+```bash
+php artisan migrate
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Explanation
 
-## License
+* `.env` manages environment-level configuration
+* Migrations create required database tables
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## Step 3: Language & Localization Setup
+
+Create language file:
+
+```
+resources/lang/en/messages.php
+```
+
+```php
+<?php
+
+return [
+    'welcome_message' => 'Welcome to Geo Genius',
+];
+```
+
+---
+
+## Step 4: Language Test Route
+
+Add route in `routes/web.php`:
+
+```php
+<?php
+
+use Illuminate\Support\Facades\Route;
+use Devrabiul\LaravelGeoGenius\Services\TimezoneService;
+use function Devrabiul\LaravelGeoGenius\geniusTrans;
+
+Route::get('/', function () {
+    return view('welcome');
+});
+
+Route::get('/geo-test', function () {
+    return [
+        'ip'        => laravelGeoGenius()->geo()->getClientIp(),
+        'country'   => laravelGeoGenius()->geo()->getCountry(),
+        'timezone'  => laravelGeoGenius()->geo()->getTimezone(),
+        'latitude'  => laravelGeoGenius()->geo()->getLatitude(),
+        'longitude' => laravelGeoGenius()->geo()->getLongitude(),
+    ];
+});
+
+Route::get('/timezone-test', function () {
+    $tz = new TimezoneService();
+
+    return [
+        'user_timezone' => $tz->getUserTimezone(),
+        'converted_time' => $tz->convertToUserTimezone(now()),
+    ];
+});
+
+Route::get('/lang-test', function () {
+    return __('welcome_message');
+});
+
+Route::get('/change-lang/{lang}', function ($lang) {
+    laravelGeoGenius()->language()->changeUserLanguage($lang);
+    return redirect()->back();
+});
+
+Route::get('/phone', function () {
+    return view('phone');
+});
+
+```
+
+### Explanation
+
+* Laravel uses file-based localization
+* `messages.welcome_message` maps to `messages.php`
+
+---
+
+## Step 5: Language Change Route
+
+```php
+Route::get('/change-lang/{lang}', function ($lang) {
+    laravelGeoGenius()->language()->changeUserLanguage($lang);
+    return redirect()->back();
+});
+```
+<img width="981" height="312" alt="image" src="https://github.com/user-attachments/assets/aa3e4e51-1264-4189-8fbc-c637c7b0af36" />
+
+
+### Explanation
+
+* Changes user language dynamically
+* Language stored in session or database
+* Page reloads with selected language
+
+---
+
+## Step 6: Run Laravel 12 Project
+
+Start development server:
+
+```bash
+php artisan serve
+```
+
+Open browser:
+
+```
+http://127.0.0.1:8000
+```
+
+<img width="1284" height="639" alt="image" src="https://github.com/user-attachments/assets/1fed69c8-535d-49cc-88e0-dc1d845e459f" />
+
+```bash
+http://127.0.0.1:8000/geo-test
+```
+<img width="846" height="399" alt="image" src="https://github.com/user-attachments/assets/1e4a6a2c-82a6-41f5-8858-010fd6a477a2" />
+
+```bash
+http://127.0.0.1:8000/timezone-test
+```
+<img width="1001" height="371" alt="image" src="https://github.com/user-attachments/assets/34d8008b-7009-4a2f-93e5-8818aa672dbf" />
+
+```bash
+http://127.0.0.1:8000/lang-test
+```
+<img width="790" height="353" alt="image" src="https://github.com/user-attachments/assets/652b235d-2489-46c9-a3e8-cdf77e978593" />
+
+```php
+http://127.0.0.1:8000/phone
+```
+<img width="1005" height="304" alt="image" src="https://github.com/user-attachments/assets/0e0b72ed-9c08-4060-b39b-17e1b957e270" />
+
+# Explenation:
+
+* Language changes dynamically
+* Role-based APIs return secured data
+* Scalable & production-ready architecture
+* Clean Laravel 12 best practices followed
+
+
+## Project Folder Structure
+
+```
+PHP_LARAVEL12_GEO_GENIUS
+├── app/
+│   ├── Services/
+│   ├── Helpers/
+│   └── Http/
+│
+├── resources/
+│   └── lang/
+│       └── en/
+│           └── messages.php
+│
+├── routes/
+│   ├── web.php
+│  
+│
+├── database/
+│   └── migrations/
+│
+├── .env
+├
+└──artisan
+```
+
+
+
+✅ **PHP_LARAVEL12_GEO_GENIUS is ready for development and production use.**
