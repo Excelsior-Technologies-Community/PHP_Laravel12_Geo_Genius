@@ -1,41 +1,29 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Devrabiul\LaravelGeoGenius\Services\TimezoneService;
-use function Devrabiul\LaravelGeoGenius\geniusTrans;
+use App\Http\Controllers\GeoController;
 
 Route::get('/', function () {
+
     return view('welcome');
 });
 
-Route::get('/geo-test', function () {
-    return [
-        'ip'        => laravelGeoGenius()->geo()->getClientIp(),
-        'country'   => laravelGeoGenius()->geo()->getCountry(),
-        'timezone'  => laravelGeoGenius()->geo()->getTimezone(),
-        'latitude'  => laravelGeoGenius()->geo()->getLatitude(),
-        'longitude' => laravelGeoGenius()->geo()->getLongitude(),
-    ];
-});
+/*
+|--------------------------------------------------------------------------
+| GEO ROUTES
+|--------------------------------------------------------------------------
+*/
 
-Route::get('/timezone-test', function () {
-    $tz = new TimezoneService();
+Route::get('/geo-test', [GeoController::class, 'geoTest']);
 
-    return [
-        'user_timezone' => $tz->getUserTimezone(),
-        'converted_time' => $tz->convertToUserTimezone(now()),
-    ];
-});
+Route::get('/timezone-test', [GeoController::class, 'timezoneTest']);
 
-Route::get('/lang-test', function () {
-    return __('welcome_message');
-});
+Route::get('/lang-test', [GeoController::class, 'langTest']);
 
-Route::get('/change-lang/{lang}', function ($lang) {
-    laravelGeoGenius()->language()->changeUserLanguage($lang);
-    return redirect()->back();
-});
+Route::get('/change-lang/{lang}', [GeoController::class, 'changeLanguage']);
 
-Route::get('/phone', function () {
-    return view('phone');
-});
+Route::get('/phone', [GeoController::class, 'phone']);
+
+Route::get('/track-geo', [GeoController::class, 'trackGeo']);
+
+Route::get('/geo-dashboard', [GeoController::class, 'geoDashboard']);
