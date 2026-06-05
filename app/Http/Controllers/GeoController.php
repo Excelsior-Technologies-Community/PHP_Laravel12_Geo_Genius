@@ -124,7 +124,7 @@ class GeoController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function geoDashboard()
+    public function geoDashboard(Request $request)
     {
         $totalVisits = GeoVisitLog::count();
 
@@ -132,17 +132,43 @@ class GeoController extends Controller
 
         $uniqueCities = GeoVisitLog::distinct('city')->count();
 
-        $latestLogs = GeoVisitLog::orderBy('id', 'asc')->paginate(3);
+        $query = GeoVisitLog::query();
+
+        // Search
+        if ($request->search) {
+            $query->where('country', 'like', '%' . $request->search . '%')
+                ->orWhere('city', 'like', '%' . $request->search . '%')
+                ->orWhere('browser', 'like', '%' . $request->search . '%')
+                ->orWhere('platform', 'like', '%' . $request->search . '%');
+        }
+
+        // Country Filter
+        if ($request->country) {
+            $query->where('country', $request->country);
+        }
+
+        $countries = GeoVisitLog::select('country')
+            ->distinct()
+            ->pluck('country');
+
+        $latestLogs = $query->oldest()->paginate(4);
 
         return view('geo-dashboard', compact(
-
             'totalVisits',
-
             'uniqueCountries',
-
             'uniqueCities',
-
-            'latestLogs'
+            'latestLogs',
+            'countries'
         ));
+    }
+
+    public function deleteLog($id)
+    {
+        GeoVisitLog::findOrFail($id)->delete();
+
+        return redirect()->back()->with(
+            'success',
+            'Geo Log Deleted Successfully'
+        );
     }
 }

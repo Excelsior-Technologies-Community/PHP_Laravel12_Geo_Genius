@@ -4,15 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GeoController;
 
 Route::get('/', function () {
-
     return view('welcome');
 });
-
-/*
-|--------------------------------------------------------------------------
-| GEO ROUTES
-|--------------------------------------------------------------------------
-*/
 
 Route::get('/geo-test', [GeoController::class, 'geoTest']);
 
@@ -27,3 +20,6 @@ Route::get('/phone', [GeoController::class, 'phone']);
 Route::get('/track-geo', [GeoController::class, 'trackGeo']);
 
 Route::get('/geo-dashboard', [GeoController::class, 'geoDashboard']);
+
+Route::delete('/geo-delete/{id}', [GeoController::class, 'deleteLog'])
+    ->name('geo.delete');
