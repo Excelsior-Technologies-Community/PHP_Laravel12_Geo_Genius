@@ -19,5 +19,10 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // Uncomment below to generate demo geo logs:
+        // $this->call([
+        //     GeoVisitLogSeeder::class,
+        // ]);
     }
 }

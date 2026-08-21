@@ -1,19 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 
 <head>
-
     <meta charset="UTF-8">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Geo Analytics Dashboard</title>
-
-    <!-- Bootstrap 5 -->
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
+    <title>@lang('messages.dashboard_title')</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <style>
         body {
             background: #f4f7fc;
@@ -104,11 +97,14 @@
             font-weight: 600;
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | PAGINATION
-        |--------------------------------------------------------------------------
-        */
+        .chart-container {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+            height: 350px;
+        }
 
         .pagination-wrapper {
             margin-top: 25px;
@@ -186,15 +182,12 @@
             }
         }
     </style>
-
 </head>
 
 <body>
-
     <div class="container dashboard-container">
-
         <h1 class="dashboard-title">
-            🌍 Geo Analytics Dashboard
+            🌍 @lang('messages.dashboard_title')
         </h1>
 
         @if(session('success'))
@@ -204,21 +197,30 @@
             </div>
         @endif
 
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show mb-4">
+                {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
+        <div class="chart-container">
+            <h5 class="mb-3">@lang('messages.total_visits') @lang('messages.dashboard_title')</h5>
+            <canvas id="visitsChart" height="100"></canvas>
+        </div>
+
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-body">
                 <form method="GET" action="{{ url('/geo-dashboard') }}">
                     <div class="row g-3">
-
                         <div class="col-md-5">
                             <input type="text" name="search" class="form-control"
-                                placeholder="Search Country, City, Browser, Platform..."
+                                placeholder="@lang('messages.search_placeholder')"
                                 value="{{ request('search') }}">
                         </div>
-
                         <div class="col-md-4">
                             <select name="country" class="form-select">
-                                <option value="">All Countries</option>
-
+                                <option value="">@lang('messages.all_countries')</option>
                                 @foreach($countries as $country)
                                     <option value="{{ $country }}" {{ request('country') == $country ? 'selected' : '' }}>
                                         {{ $country }}
@@ -226,79 +228,40 @@
                                 @endforeach
                             </select>
                         </div>
-
                         <div class="col-md-3">
-                            <button class="btn btn-primary w-100">
-                                Search
+                            <button type="submit" class="btn btn-primary w-100">
+                                @lang('messages.search_button')
                             </button>
                         </div>
-
                     </div>
                 </form>
             </div>
         </div>
-        <!-- STATS CARDS -->
 
         <div class="row g-4 mb-4">
-
             <div class="col-md-4">
-
                 <div class="card stats-card">
-
-                    <div class="stats-number">
-                        {{ $totalVisits }}
-                    </div>
-
-                    <div class="stats-text">
-                        Total Visits
-                    </div>
-
+                    <div class="stats-number">{{ $totalVisits }}</div>
+                    <div class="stats-text">@lang('messages.total_visits')</div>
                 </div>
-
             </div>
-
             <div class="col-md-4">
-
                 <div class="card stats-card">
-
-                    <div class="stats-number">
-                        {{ $uniqueCountries }}
-                    </div>
-
-                    <div class="stats-text">
-                        Unique Countries
-                    </div>
-
+                    <div class="stats-number">{{ $uniqueCountries }}</div>
+                    <div class="stats-text">@lang('messages.unique_countries')</div>
                 </div>
-
             </div>
-
             <div class="col-md-4">
-
                 <div class="card stats-card">
-
-                    <div class="stats-number">
-                        {{ $uniqueCities }}
-                    </div>
-
-                    <div class="stats-text">
-                        Unique Cities
-                    </div>
-
+                    <div class="stats-number">{{ $uniqueCities }}</div>
+                    <div class="stats-text">@lang('messages.unique_cities')</div>
                 </div>
-
             </div>
-
         </div>
 
-        <!-- TABLE -->
-
         <div class="table-container">
-
             <div class="table-responsive">
-
                 <table class="table table-hover align-middle mb-0">
-
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -312,85 +275,83 @@
                             <th>Action</th>
                         </tr>
                     </thead>
-
                     <tbody>
-
                         @forelse($latestLogs as $log)
-
                             <tr>
-
                                 <td>{{ $log->id }}</td>
-
                                 <td>{{ $log->ip_address }}</td>
-
                                 <td>{{ $log->country }}</td>
-
                                 <td>{{ $log->city }}</td>
-
                                 <td>{{ $log->timezone }}</td>
-
-                                <td>
-                                    <span class="badge-browser">
-                                        {{ $log->browser }}
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <span class="badge-platform">
-                                        {{ $log->platform }}
-                                    </span>
-                                </td>
-
-                                <td>{{ $log->visited_at }}</td>
-
+                                <td><span class="badge-browser">{{ $log->browser }}</span></td>
+                                <td><span class="badge-platform">{{ $log->platform }}</span></td>
+                                <td>{{ \Carbon\Carbon::parse($log->visited_at)->format('Y-m-d H:i:s') }}</td>
                                 <td>
                                     <form action="{{ route('geo.delete', $log->id) }}" method="POST">
-
                                         @csrf
                                         @method('DELETE')
-
                                         <button type="submit" class="btn btn-danger btn-sm"
-                                            onclick="return confirm('Delete this log?')">
-
+                                            onclick="return confirm('@lang('messages.delete_confirm')')">
                                             Delete
-
                                         </button>
-
                                     </form>
                                 </td>
-
                             </tr>
-
                         @empty
-
                             <tr>
-
                                 <td colspan="9" class="text-center py-4">
-                                    No Geo Analytics Data Found
+                                    @lang('messages.no_data')
                                 </td>
-
                             </tr>
-
                         @endforelse
-
                     </tbody>
-
                 </table>
-
             </div>
-
         </div>
-
-        <!-- PAGINATION -->
 
         <div class="pagination-wrapper">
-
             {{ $latestLogs->links() }}
-
         </div>
-
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const ctx = document.getElementById('visitsChart').getContext('2d');
+        const visitsChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: @json($chartData['labels'] ?? []),
+                datasets: [{
+                    label: '@lang('messages.total_visits')',
+                    data: @json($chartData['data'] ?? []),
+                    borderColor: '#4f46e5',
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#4f46e5',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                    },
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                        },
+                    },
+                },
+            },
+        });
+    </script>
 </body>
 
 </html>

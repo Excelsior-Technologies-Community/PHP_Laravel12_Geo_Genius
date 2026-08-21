@@ -3,172 +3,175 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\GeoVisitLog;
+use App\Services\GeoService;
+use App\Services\AnalyticsService;
 use Jenssegers\Agent\Agent;
-use Devrabiul\LaravelGeoGenius\Services\TimezoneService;
 
 class GeoController extends Controller
 {
-    /*
-    |--------------------------------------------------------------------------
-    | GEO TEST
-    |--------------------------------------------------------------------------
-    */
+    protected $geoService;
+
+    protected $analyticsService;
+
+    public function __construct(GeoService $geoService, AnalyticsService $analyticsService)
+    {
+        $this->geoService = $geoService;
+        $this->analyticsService = $analyticsService;
+    }
 
     public function geoTest()
     {
         return response()->json([
-
-            'ip' => laravelGeoGenius()->geo()->getClientIp(),
-
-            'country' => laravelGeoGenius()->geo()->getCountry(),
-
-            'city' => laravelGeoGenius()->geo()->getCity(),
-
-            'timezone' => laravelGeoGenius()->geo()->getTimezone(),
-
-            'latitude' => laravelGeoGenius()->geo()->getLatitude(),
-
-            'longitude' => laravelGeoGenius()->geo()->getLongitude(),
-
+            'ip' => $this->geoService->getClientIp(),
+            'country' => $this->geoService->getCountry(),
+            'city' => $this->geoService->getCity(),
+            'timezone' => $this->geoService->getTimezone(),
+            'latitude' => $this->geoService->getLatitude(),
+            'longitude' => $this->geoService->getLongitude(),
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | TIMEZONE TEST
-    |--------------------------------------------------------------------------
-    */
+    public function geoTestView()
+    {
+        $data = [
+            'ip' => $this->geoService->getClientIp(),
+            'country' => $this->geoService->getCountry(),
+            'city' => $this->geoService->getCity(),
+            'timezone' => $this->geoService->getTimezone(),
+            'latitude' => $this->geoService->getLatitude(),
+            'longitude' => $this->geoService->getLongitude(),
+        ];
+
+        return view('geo-test', compact('data'));
+    }
 
     public function timezoneTest()
     {
-        $tz = new TimezoneService();
-
         return response()->json([
-
-            'user_timezone' => $tz->getUserTimezone(),
-
-            'converted_time' => $tz->convertToUserTimezone(now()),
-
+            'user_timezone' => $this->geoService->getUserTimezone(),
+            'converted_time' => $this->geoService->convertToUserTimezone(now()),
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | LANGUAGE TEST
-    |--------------------------------------------------------------------------
-    */
+    public function timezoneTestView()
+    {
+        $data = [
+            'user_timezone' => $this->geoService->getUserTimezone(),
+            'converted_time' => $this->geoService->convertToUserTimezone(now()),
+        ];
+
+        return view('timezone-test', compact('data'));
+    }
 
     public function langTest()
     {
-        return __('messages.welcome_message');
+        return response()->json([
+            'message' => __('messages.welcome_message'),
+        ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | CHANGE LANGUAGE
-    |--------------------------------------------------------------------------
-    */
+    public function langTestView()
+    {
+        $message = __('messages.welcome_message');
+
+        return view('lang-test', compact('message'));
+    }
 
     public function changeLanguage($lang)
     {
-        laravelGeoGenius()->language()->changeUserLanguage($lang);
+        $validLangs = ['en', 'bn'];
 
-        return redirect()->back();
+        if (!in_array($lang, $validLangs)) {
+            return redirect()->back()->with('error', __('messages.invalid_language'));
+        }
+
+        $this->geoService->changeUserLanguage($lang);
+
+        \Illuminate\Support\Facades\App::setLocale($lang);
+
+        session(['lang' => $lang]);
+
+        return redirect()->back()->with('success', __('messages.language_changed'));
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | PHONE PAGE
-    |--------------------------------------------------------------------------
-    */
 
     public function phone()
     {
         return view('phone');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | TRACK GEO VISITOR
-    |--------------------------------------------------------------------------
-    */
+    public function phoneSubmit(Request $request)
+    {
+        $request->validate([
+            'phone' => 'required|string|max:20',
+        ]);
+
+        return back()->with('success', 'Phone number received: ' . $request->phone);
+    }
 
     public function trackGeo()
     {
-        $agent = new Agent();
+        if (session()->has('geo_tracked')) {
+            return redirect('/geo-dashboard')->with('success', 'Geo already tracked this session.');
+        }
 
-        GeoVisitLog::create([
+        $geoData = $this->geoService->getBrowserPlatform();
 
-            'ip_address' => laravelGeoGenius()->geo()->getClientIp(),
-
-            'country' => laravelGeoGenius()->geo()->getCountry(),
-
-            'city' => laravelGeoGenius()->geo()->getCity(),
-
-            'timezone' => laravelGeoGenius()->geo()->getTimezone(),
-
-            'browser' => $agent->browser(),
-
-            'platform' => $agent->platform(),
-
+        \App\Models\GeoVisitLog::create([
+            'ip_address' => $this->geoService->getClientIp(),
+            'country' => $this->geoService->getCountry(),
+            'city' => $this->geoService->getCity(),
+            'timezone' => $this->geoService->getTimezone(),
+            'browser' => $geoData['browser'],
+            'platform' => $geoData['platform'],
             'visited_at' => now(),
         ]);
 
-        return redirect('/geo-dashboard');
-    }
+        session()->put('geo_tracked', true);
 
-    /*
-    |--------------------------------------------------------------------------
-    | GEO ANALYTICS DASHBOARD
-    |--------------------------------------------------------------------------
-    */
+        return redirect('/geo-dashboard')->with('success', 'Geo tracked successfully.');
+    }
 
     public function geoDashboard(Request $request)
     {
-        $totalVisits = GeoVisitLog::count();
+        $totalVisits = $this->analyticsService->getTotalVisits();
 
-        $uniqueCountries = GeoVisitLog::distinct('country')->count();
+        $uniqueCountries = $this->analyticsService->getUniqueCountries();
 
-        $uniqueCities = GeoVisitLog::distinct('city')->count();
+        $uniqueCities = $this->analyticsService->getUniqueCities();
 
-        $query = GeoVisitLog::query();
+        $countries = $this->analyticsService->getCountries();
 
-        // Search
-        if ($request->search) {
-            $query->where('country', 'like', '%' . $request->search . '%')
-                ->orWhere('city', 'like', '%' . $request->search . '%')
-                ->orWhere('browser', 'like', '%' . $request->search . '%')
-                ->orWhere('platform', 'like', '%' . $request->search . '%');
-        }
+        $latestLogs = $this->analyticsService->getFilteredLogs($request);
 
-        // Country Filter
-        if ($request->country) {
-            $query->where('country', $request->country);
-        }
-
-        $countries = GeoVisitLog::select('country')
-            ->distinct()
-            ->pluck('country');
-
-        $latestLogs = $query->oldest()->paginate(4);
+        $chartData = $this->getChartData();
 
         return view('geo-dashboard', compact(
             'totalVisits',
             'uniqueCountries',
             'uniqueCities',
             'latestLogs',
-            'countries'
+            'countries',
+            'chartData'
         ));
+    }
+
+    protected function getChartData()
+    {
+        $logs = \App\Models\GeoVisitLog::selectRaw('DATE(visited_at) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->orderBy('date', 'asc')
+            ->get();
+
+        return [
+            'labels' => $logs->pluck('date')->toArray(),
+            'data' => $logs->pluck('count')->toArray(),
+        ];
     }
 
     public function deleteLog($id)
     {
-        GeoVisitLog::findOrFail($id)->delete();
+        $this->analyticsService->deleteLog($id);
 
-        return redirect()->back()->with(
-            'success',
-            'Geo Log Deleted Successfully'
-        );
+        return redirect()->back()->with('success', 'Geo Log Deleted Successfully');
     }
 }
